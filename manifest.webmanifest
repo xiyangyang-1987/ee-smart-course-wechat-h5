@@ -1,0 +1,21 @@
+{
+  "name": "数字电子时钟工程诊断",
+  "short_name": "时钟诊断",
+  "description": "《电工电子学课程设计（二）》数字电子时钟参数检查、故障诊断与工程证据记录工具",
+  "id": "./engineering-design-tool.html",
+  "start_url": "./engineering-design-tool.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f3f7f8",
+  "theme_color": "#10243d",
+  "lang": "zh-CN",
+  "categories": ["education", "utilities"],
+  "icons": [
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ],
+  "shortcuts": [
+    {"name": "开始结构检查", "url": "./engineering-design-tool.html?source=shortcut"},
+    {"name": "返回课程门户", "url": "./index.html"}
+  ]
+}
