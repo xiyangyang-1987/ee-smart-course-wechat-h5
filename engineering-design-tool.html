@@ -96,7 +96,14 @@
     function renderFaultDiagnosis() {
       const code=tool$('fault-observation').value; const box=tool$('diagnosis');
       if (!code || code==='none') { box.innerHTML='<b>AI工程诊断：</b>选择故障现象后，系统将给出下一测量点、判据和建议动作；请用真实波形或截图验证。'; return; }
-      const rule=faultRules[code]; box.innerHTML=`<b>AI工程诊断 · ${rule.label}：</b>下一测量点：${rule.next}；判据：${rule.criterion}；建议动作：${rule.action}。`;
+      const rule=faultRules[code]; const counter=tool$('counter').value; const display=tool$('display').value; const mode=tool$('mode-select').value; const adjust=tool$('adjust').value;
+      let next=rule.next, criterion=rule.criterion, action=rule.action;
+      if (code==='no-count' && counter==='74LS160') { next='555 Pin3、U1 CLK/ENP/ENT'; criterion='应观察到约1 Hz方波，且同步计数器时钟与使能条件同时有效'; action='先确认时基，再核对74LS160的CLK、ENP/ENT、CLR和LOAD'; }
+      if (code==='no-carry' && counter==='74LS160') { next='U2 RCO/进位 → U3 ENP/ENT'; criterion='59→00时应由同步计数器进位端产生有效使能，不应把窄复位脉冲当作进位'; action='保存RCO、ENP/ENT与秒/分输出同屏波形，比较修改前后的同步边沿'; }
+      if (code==='garbled' && display==='74LS48') { next='74LS90 QA/QB/QC/QD → 74LS48 A/B/C/D及LT/RBI/RBO'; criterion='QA→A、QB→B、QC→C、QD→D，且74LS48控制脚与共阴数码管条件正确'; action='逐位固定输入0—9，检查控制脚状态、限流电阻和共阴连接'; }
+      if (code==='bounce' && adjust==='no') { next='PB_NO、上拉、滤波电容、7414输出'; criterion='当前尚未完成调时/调分去抖模块，不能据此认定一次按键只产生一个有效脉冲'; action='先完成7414去抖，再通过7432与正常进位合并并对比波形'; }
+      if (code==='no-reset' && mode==='12') { next='12小时状态译码、U5/U6复位与12→01转换逻辑'; criterion='12小时制需同时验证11:59:59→12:00:00和12→01:00:00两个状态边界'; action='将12小时制作为拓展方案，补充AM/PM或状态转换说明后再请教师审核'; }
+      box.innerHTML=`<b>AI工程诊断 · ${rule.label}：</b>下一测量点：${next}；判据：${criterion}；建议动作：${action}。`;
     }
     function renderToolHistory() {
       const history=tool$('history');
@@ -118,7 +125,7 @@
     }
     function saveEvidence() { const observation=tool$('fault-observation').value; const measurement=tool$('measurement').value.trim(); const note=tool$('evidence-note').value.trim(); if (observation==='none' || !measurement || note.length<8) { window.toast('请先选择故障、填写测量点，并写下至少8个字符的复测结论'); return; } const result=classroomCalculate(false); toolState.evidence={observation,measurement,note,savedAt:new Date().toISOString(),result:{passed:result.passed,total:result.total,error:result.error,params:result.params}}; saveToolState(); renderToolHistory(); window.toast('工程证据已保存到本机工作区'); }
     function clearEvidence() { toolState.evidence=null; saveToolState(); tool$('fault-observation').value='none'; tool$('measurement').value=''; tool$('evidence-note').value=''; renderFaultDiagnosis(); renderToolHistory(); window.toast('本次证据记录已清空'); }
-    toolControls.forEach(control=>control.addEventListener('change',()=>classroomCalculate(false))); tool$('clock-hz').addEventListener('input',()=>classroomCalculate(false));
+    toolControls.forEach(control=>control.addEventListener('change',()=>{ classroomCalculate(false); renderFaultDiagnosis(); })); tool$('clock-hz').addEventListener('input',()=>{ classroomCalculate(false); renderFaultDiagnosis(); });
     tool$('fault-observation').addEventListener('change',renderFaultDiagnosis); tool$('save-evidence').addEventListener('click',saveEvidence); tool$('clear-evidence').addEventListener('click',clearEvidence);
     tool$('calculate').addEventListener('click',()=>classroomCalculate(true)); tool$('reset').addEventListener('click',()=>{ toolState=freshToolState(); applyToolParams(); clearEvidence(); classroomCalculate(false); window.toast('已恢复课程主线示例'); });
     tool$('export').addEventListener('click',()=>{ classroomCalculate(false); downloadJson('电工电子学课程设计_数字电子时钟检查记录.json',{tool:'EE-DigitalClock-Classroom-v1',account:toolAccount,exportedAt:new Date().toISOString(),privacy:'仅本机浏览器保存，不含学生真实身份',workspace:toolState}); window.toast('设计检查与工程证据已导出'); });
