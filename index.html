@@ -188,12 +188,12 @@
       5: {title:'迭代改进与技术报告', prompt:'说明故障假设、修改动作、复测结果和版本差异。'},
       6: {title:'成果答辩与工程档案', prompt:'整理演示视频、答辩问答、个人反思和最终工程档案。'}
     };
-    const defaultState = account => ({account, tasks:{1:'todo',2:'locked',3:'locked',4:'locked',5:'locked',6:'locked'}, evidence:{}, replies:[], pathGenerated:false, updatedAt:new Date().toISOString()});
+    const defaultState = account => ({version:2,account, tasks:{1:'todo',2:'locked',3:'locked',4:'locked',5:'locked',6:'locked'}, evidence:{}, replies:[], pathGenerated:false, updatedAt:new Date().toISOString()});
     const activeAccount = () => localStorage.getItem(STORAGE_PREFIX + 'active') || '课堂演示';
     const loadState = account => {
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_PREFIX + account));
-        if (saved && saved.tasks) return Object.assign(defaultState(account), saved, {account});
+        if (saved && saved.version===2 && saved.tasks) return Object.assign(defaultState(account), saved, {account,version:2});
       } catch (error) { /* ignore malformed local data and restore a clean workspace */ }
       return defaultState(account);
     };
@@ -284,7 +284,7 @@
       $('project-ai-feedback').textContent = state.evidence[3] ? '阶段三证据已保存。教师复核时重点查看波形、边界测试和故障修改是否一一对应。' : '先运行设计助手并导出检查记录，再将诊断线索、实测点和修改后的结果写入阶段成果。';
     }
     function normalizeClassRecord(report) {
-      if (!report || !String(report.tool || '').startsWith('EE-SmartCourse-') || !Array.isArray(report.tasks)) throw new Error('不是本课程工程档案');
+      if (!report || report.tool!=='EE-SmartCourse-LocalClassroom-v1' || !Array.isArray(report.tasks)) throw new Error('不是本课程工程档案');
       const allowedStatuses=new Set(['passed','submitted','todo','locked']); const seen=new Set();
       const account=String(report.account || '').trim();
       if (!account || account.length>24) throw new Error('小组代号为空或超过24个字符');
