@@ -1,7 +1,7 @@
 {
   "name": "数字电子时钟工程诊断",
   "short_name": "时钟诊断",
-  "description": "《电工电子学课程设计（二）》数字电子时钟参数检查、故障诊断与工程证据记录工具",
+  "description": "《电工电子课程设计（二）》数字电子时钟参数检查、故障诊断与工程证据记录工具",
   "id": "./engineering-design-tool.html",
   "start_url": "./engineering-design-tool.html?source=pwa",
   "scope": "./",
