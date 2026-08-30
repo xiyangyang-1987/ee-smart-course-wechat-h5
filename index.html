@@ -283,6 +283,28 @@
       $('feedback-count').textContent = `${state.replies.length ? 0 : 1} 条建议`;
       $('project-ai-feedback').textContent = state.evidence[3] ? '阶段三证据已保存。教师复核时重点查看波形、边界测试和故障修改是否一一对应。' : '先运行设计助手并导出检查记录，再将诊断线索、实测点和修改后的结果写入阶段成果。';
     }
+    function validateToolCheck(toolCheck) {
+      if (!toolCheck || typeof toolCheck !== 'object' || Array.isArray(toolCheck)) throw new Error('工程检查记录格式不正确');
+      const params=toolCheck.params;
+      if (params!==undefined && params!==null) {
+        if (typeof params!=='object' || Array.isArray(params)) throw new Error('工程参数格式不正确');
+        if (params.source!==undefined && !['555','digital','external'].includes(params.source)) throw new Error('工程时基方案不在课程范围');
+        if (params.counter!==undefined && !['74LS90','74LS160'].includes(params.counter)) throw new Error('工程计数器方案不在课程范围');
+        if (params.display!==undefined && !['DCD_HEX','74LS48'].includes(params.display)) throw new Error('工程显示方案不在课程范围');
+        if (params.mode!==undefined && !['12','24'].includes(String(params.mode))) throw new Error('工程时制不在课程范围');
+        if (params.adjust!==undefined && !['yes','no'].includes(params.adjust)) throw new Error('工程调时方案不在课程范围');
+      }
+      const checks=toolCheck.checks;
+      if (Array.isArray(checks)) {
+        if (checks.length!==6 || checks.some(row=>!Array.isArray(row) || typeof row[0]!=='boolean')) throw new Error('工程检查项必须为六项');
+      } else if (checks && typeof checks==='object') {
+        if (!Number.isInteger(Number(checks.passed)) || Number(checks.passed)<0 || Number(checks.passed)>6 || Number(checks.total)!==6 || !Number.isFinite(Number(checks.error)) || Number(checks.error)<0) throw new Error('工程检查摘要格式不正确');
+      } else if (checks!==undefined && checks!==null) throw new Error('工程检查摘要缺失');
+      if (toolCheck.boundaryEvidence!==undefined && typeof toolCheck.boundaryEvidence!=='boolean') throw new Error('边界证据状态格式不正确');
+      if (toolCheck.boundaryRecord!==undefined && (typeof toolCheck.boundaryRecord!=='string' || toolCheck.boundaryRecord.length>160)) throw new Error('边界记录格式不正确');
+      if (toolCheck.boundaryEvidence===true && String(toolCheck.boundaryRecord || '').trim().length<8) throw new Error('边界记录不完整');
+      return toolCheck;
+    }
     function normalizeClassRecord(report) {
       if (!report || report.tool!=='EE-SmartCourse-LocalClassroom-v1' || !Array.isArray(report.tasks)) throw new Error('不是本课程工程档案');
       const allowedStatuses=new Set(['passed','submitted','todo','locked']); const seen=new Set();
@@ -292,7 +314,8 @@
       if (tasks.length!==6 || seen.size!==6) throw new Error('必须包含1—6共六个阶段');
       tasks.sort((a,b)=>a.id-b.id);
       const done=tasks.filter(item=>isDone(item.status)).length;
-      return {account, exportedAt:report.exportedAt || new Date().toISOString(), tasks, done, toolCheck:report.toolCheck || null};
+      const toolCheck=report.toolCheck===undefined || report.toolCheck===null ? null : validateToolCheck(report.toolCheck);
+      return {account, exportedAt:report.exportedAt || new Date().toISOString(), tasks, done, toolCheck};
     }
     function decodeSubmission(code) {
       const value=String(code || '').trim();
@@ -325,13 +348,13 @@
     function loadDemoClass() {
       const makeTasks=done=>Object.keys(taskMeta).map(id=>({id:Number(id),title:taskMeta[id].title,status:Number(id)<=done?(Number(id)<done?'passed':'submitted'):Number(id)===done+1?'todo':'locked',evidence:Number(id)<=done?{note:`虚拟课堂第${id}阶段证据`}:null}));
       const demoDone=[6,5,4,3,3,2,2,2,1,1];
-      classRecords=demoDone.map((done,index)=>{const flagged=index===2||index===3; return normalizeClassRecord({tool:'EE-SmartCourse-LocalClassroom-v1',account:`课堂演示第${String(index+1).padStart(2,'0')}组`,exportedAt:new Date().toISOString(),tasks:makeTasks(done),toolCheck:{params:{counter:index===7?'74LS160':'74LS90',display:index===3?'74LS48':'DCD_HEX',mode:index===6?'12':'24'},checks:{passed:index===2?4:6,total:6,error:index===3?2:0},boundaryEvidence:true,evidence:flagged?{observation:index===2?'no-carry':'garbled',measurement:'虚拟测点',note:'虚拟课堂演示记录'}:null}});});
+      classRecords=demoDone.map((done,index)=>{const flagged=index===2||index===3; return normalizeClassRecord({tool:'EE-SmartCourse-LocalClassroom-v1',account:`课堂演示第${String(index+1).padStart(2,'0')}组`,exportedAt:new Date().toISOString(),tasks:makeTasks(done),toolCheck:{params:{counter:index===7?'74LS160':'74LS90',display:index===3?'74LS48':'DCD_HEX',mode:index===6?'12':'24'},checks:{passed:index===2?4:6,total:6,error:index===3?2:0},boundaryEvidence:true,boundaryRecord:'虚拟课堂边界证据记录',evidence:flagged?{observation:index===2?'no-carry':'garbled',measurement:'虚拟测点',note:'虚拟课堂演示记录'}:null}});});
       saveClassRecords(); renderAnalytics(); toast('已载入10个虚拟小组，可复现29/60阶段与7组干预');
     }
     function renderAnalytics() {
       const currentTasks=Object.keys(taskMeta).map(id=>({id:Number(id),status:state.tasks[id],evidence:state.evidence[id] || null}));
       const records=classRecords.length ? classRecords : [{account:state.account,tasks:currentTasks,done:completedCount()}];
-      const submitted=records.reduce((sum,item)=>sum+item.done,0); const total=records.length*6; const checkStats=item=>{ const value=item.toolCheck && item.toolCheck.checks; const boundary=item.toolCheck && item.toolCheck.boundaryEvidence===true; if(Array.isArray(value)){ const passed=value.filter(row=>row && row[0]).length; return {passed,total:value.length,error:Math.max(...value.map(row=>Number(row && row[2]) || 0),0),boundary}; } return value && Number.isFinite(Number(value.total)) ? {passed:Number(value.passed)||0,total:Number(value.total)||0,error:Number(value.error)||0,boundary} : null; }; const intervention=records.filter(item=>{ const stats=checkStats(item); return item.done<3 || (stats && (stats.passed<stats.total || stats.error>1 || !stats.boundary)); }).length;
+      const submitted=records.reduce((sum,item)=>sum+item.done,0); const total=records.length*6; const checkStats=item=>{ const toolCheck=item.toolCheck; if(!toolCheck || typeof toolCheck!=='object') return null; const value=toolCheck.checks; const boundary=toolCheck.boundaryEvidence===true && String(toolCheck.boundaryRecord || '').trim().length>=8; if(Array.isArray(value)){ if(value.length!==6 || value.some(row=>!Array.isArray(row) || typeof row[0]!=='boolean')) return null; const passed=value.filter(row=>row[0]).length; return {passed,total:6,error:Math.max(...value.map(row=>Number(row && row[2]) || 0),0),boundary}; } return value && Number(value.total)===6 && Number.isInteger(Number(value.passed)) && Number(value.passed)>=0 && Number(value.passed)<=6 && Number.isFinite(Number(value.error)) && Number(value.error)>=0 ? {passed:Number(value.passed),total:6,error:Number(value.error),boundary} : null; }; const intervention=records.filter(item=>{ const stats=checkStats(item); return item.done<3 || !stats || stats.passed<stats.total || stats.error>1 || !stats.boundary; }).length;
       $('analytics-active').textContent = String(records.length); $('analytics-submitted').textContent = `${submitted} / ${total}`; $('analytics-intervention').textContent = `${intervention} 项`; $('analytics-attainment').textContent = Math.round(submitted/total*100) + '%'; $('analytics-source').textContent = classRecords.length ? `已导入 ${classRecords.length} 个工作区 · 同名覆盖更新` : '当前工作区 · 可导入多个JSON';
       const faultLabels={'no-count':'显示不计数','no-carry':'秒到59后分不进位','garbled':'数码管显示乱码','bounce':'按键一次跳数多次','no-reset':'23后没有回到00'};
       $('analytics-body').innerHTML=records.map(item=>{ const next=item.tasks.find(task=>!isDone(task.status) && task.status!=='locked') || item.tasks.find(task=>!isDone(task.status)); const node=item.done>=6?'成果答辩完成':taskMeta[next ? next.id : 3].title; const design=Math.min(100,25+item.done*12); const test=item.tasks.some(task=>task.id===4 && task.evidence)?70:item.tasks.some(task=>task.id===3 && task.evidence)?35:10; const stats=checkStats(item); const needs=item.done<3 || (stats && (stats.passed<stats.total || stats.error>1 || !stats.boundary)); const action=item.done>=6 && !needs?'可进入答辩':item.done<3?'补交仿真证据':needs?'复核诊断与边界证据':`继续：${node}`; const check=item.toolCheck || {}; const params=check.params || {}; const ev=check.evidence; const summary=check.params ? `${params.counter || '—'} · ${params.display || '—'} · ${params.mode==='12'?'12':'24'}时制${ev && ev.observation ? ` · ${faultLabels[ev.observation] || '已记录故障'}` : ''}${stats && stats.error>1 ? ` · 误差${stats.error.toFixed(1)}%` : ''}${stats ? (stats.boundary ? ' · 边界记录已提交' : ' · 边界证据未确认') : ''}` : '尚未提交设计检查'; return `<tr><td><strong>${escapeHtml(item.account)} · 数字电子钟</strong></td><td>${escapeHtml(node)}</td><td>${item.done} / 6</td><td>${escapeHtml(summary)}</td><td><div class="bar"><i style="width:${design}%"></i></div></td><td><div class="bar"><i style="width:${test}%"></i></div></td><td><span class="tag ${item.done>=6 && !needs?'green':'amber'}">${escapeHtml(action)}</span></td></tr>`; }).join('');
