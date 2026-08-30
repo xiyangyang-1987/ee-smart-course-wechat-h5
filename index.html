@@ -299,7 +299,7 @@
         if (checks.length!==6 || checks.some(row=>!Array.isArray(row) || typeof row[0]!=='boolean')) throw new Error('工程检查项必须为六项');
       } else if (checks && typeof checks==='object') {
         if (!Number.isInteger(Number(checks.passed)) || Number(checks.passed)<0 || Number(checks.passed)>6 || Number(checks.total)!==6 || !Number.isFinite(Number(checks.error)) || Number(checks.error)<0) throw new Error('工程检查摘要格式不正确');
-      } else if (checks!==undefined && checks!==null) throw new Error('工程检查摘要缺失');
+      } else throw new Error('工程检查摘要缺失');
       if (toolCheck.boundaryEvidence!==undefined && typeof toolCheck.boundaryEvidence!=='boolean') throw new Error('边界证据状态格式不正确');
       if (toolCheck.boundaryRecord!==undefined && (typeof toolCheck.boundaryRecord!=='string' || toolCheck.boundaryRecord.length>160)) throw new Error('边界记录格式不正确');
       if (toolCheck.boundaryEvidence===true && String(toolCheck.boundaryRecord || '').trim().length<8) throw new Error('边界记录不完整');
