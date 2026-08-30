@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <title>电工电子学课程设计 | 智慧课程门户</title>
+  <title>电工电子课程设计（二） | 智慧课程门户</title>
   <style>
     :root {
       --navy: #10243d;
@@ -148,7 +148,7 @@
 <body>
   <div class="shell">
     <aside>
-      <div class="brand"><div class="brand-mark">EE</div><div><strong>电工电子学课程设计</strong><span>智慧课程门户 · 课堂工作区</span></div></div>
+      <div class="brand"><div class="brand-mark">EE</div><div><strong>电工电子课程设计（二）</strong><span>智慧课程门户 · 课堂工作区</span></div></div>
       <nav aria-label="主导航">
         <button class="active" data-view="home"><span class="icon">⌂</span>学习总览</button>
         <button data-view="path"><span class="icon">↗</span>知识图谱</button>
@@ -323,12 +323,12 @@
     $('ai-path').addEventListener('click', () => { state.pathGenerated = true; saveState(); renderAll(); showView('home'); toast('已生成下一步路径：阶段证据 → 教师复核 → 迭代改进'); });
     $('submit-btn').addEventListener('click', () => openEvidenceModal(nextTaskId()));
     $('reply-btn').addEventListener('click', openFeedbackModal);
-    $('export-project').addEventListener('click', () => { downloadJson('电工电子学课程设计_工程档案.json', buildReport()); toast('工程档案已导出'); });
+    $('export-project').addEventListener('click', () => { downloadJson('电工电子课程设计（二）_工程档案.json', buildReport()); toast('工程档案已导出'); });
     $('load-demo-class').addEventListener('click', loadDemoClass);
     $('paste-submission').addEventListener('click', openSubmissionModal);
     $('class-import').addEventListener('click', () => $('class-import-files').click());
     $('class-import-files').addEventListener('change', event => importClassFiles([...event.target.files]));
-    $('report-btn').addEventListener('click', () => { downloadJson('电工电子学课程设计_班级学习分析报告.json',{tool:'EE-SmartCourse-ClassAnalysis-v1',exportedAt:new Date().toISOString(),privacy:'教师浏览器本地汇总，不含真实身份',records:classRecords.length ? classRecords : [normalizeClassRecord(buildReport())]}); toast('班级学习分析报告已导出'); });
+    $('report-btn').addEventListener('click', () => { downloadJson('电工电子课程设计（二）_班级学习分析报告.json',{tool:'EE-SmartCourse-ClassAnalysis-v1',exportedAt:new Date().toISOString(),privacy:'教师浏览器本地汇总，不含真实身份',records:classRecords.length ? classRecords : [normalizeClassRecord(buildReport())]}); toast('班级学习分析报告已导出'); });
     $('reset-data').addEventListener('click', openResetModal);
     $('modal-close').addEventListener('click', closeModal);
     $('modal').addEventListener('click', event => { if (event.target === $('modal')) closeModal(); });
