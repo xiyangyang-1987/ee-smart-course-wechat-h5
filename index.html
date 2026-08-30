@@ -252,8 +252,9 @@
       const snapshot=readLocalToolSnapshot(state.account); const rows=snapshot && Array.isArray(snapshot.checks) ? snapshot.checks : []; const params=snapshot && snapshot.params ? snapshot.params : null;
       if (!rows.length || !params) return {label:'待诊断',note:'先运行设计助手，系统将依据检查结果生成补偿、标准或拓展路径。',advice:'先运行设计助手完成基线检查，再根据结果进入个性化学习路径。'};
       const passed=rows.filter(row=>row && row[0]).length; const total=rows.length; const error=Number.isFinite(Number(params.hz)) ? Math.abs(Number(params.hz)-1)*100 : 100;
-      if (passed<total || error>1) return {label:'补偿路径',note:`检测到${total-passed}项关注或时基误差${error.toFixed(1)}%，先补做时基、计数与边界测点，再提交阶段三证据。`,advice:'已生成补偿路径：先回看对应知识卡片，补做测点记录和边界波形，复测通过后再进入下一阶段。'};
-      if (params.mode==='12' || params.counter==='74LS160' || params.display==='74LS48') return {label:'拓展路径',note:'主线检查通过，当前方案含拓展器件或12小时制；补充方案差异与边界论证后进入答辩。',advice:'已生成拓展路径：补充器件引脚、译码控制和时制边界的差异证据，再提交教师复核。'};
+      const extension=params.mode==='12' || params.counter==='74LS160' || params.display==='74LS48';
+      if (error>1 || (!extension && passed<total)) return {label:'补偿路径',note:`检测到${total-passed}项关注或时基误差${error.toFixed(1)}%，先补做时基、计数与边界测点，再提交阶段三证据。`,advice:'已生成补偿路径：先回看对应知识卡片，补做测点记录和边界波形，复测通过后再进入下一阶段。'};
+      if (extension) return {label:'拓展路径',note:'主线检查通过，当前方案含拓展器件或12小时制；补充方案差异与边界论证后进入答辩。',advice:'已生成拓展路径：补充器件引脚、译码控制和时制边界的差异证据，再提交教师复核。'};
       return {label:'标准路径',note:'基线检查通过，按标准路径提交59→00进位和23→00回零证据。',advice:'已生成标准路径：保存1 Hz读数、59→00进位和23→00回零三类证据，再进入教师复核。'};
     }
     function renderHome() {
