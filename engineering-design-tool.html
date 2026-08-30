@@ -81,8 +81,8 @@
       'bounce': {label:'按键一次跳数多次', next:'PB_NO、上拉、滤波电容、7414输出', criterion:'一次按键只产生一个有效脉冲，去抖后边沿清晰', action:'对比去抖前后波形，并检查7432合并逻辑'},
       'no-reset': {label:'23后没有回到00', next:'U6.QB、U5.QC → 7408 → U5/U6 R0', criterion:'23→00边界必须同时触发时十位和时个位复位', action:'保留23:59:59→00:00:00完整边界证据'}
     };
-    const freshToolState = () => ({params:{source:'555',hz:1,counter:'74LS90',display:'DCD_HEX',mode:'24',adjust:'yes'},evidence:null,checks:[]});
-    let toolState = (() => { try { return Object.assign(freshToolState(), JSON.parse(localStorage.getItem(toolStorageKey) || '{}')); } catch (error) { return freshToolState(); } })();
+    const freshToolState = () => ({version:2,params:{source:'555',hz:1,counter:'74LS90',display:'DCD_HEX',mode:'24',adjust:'yes'},evidence:null,checks:[]});
+    let toolState = (() => { try { const saved=JSON.parse(localStorage.getItem(toolStorageKey) || 'null'); return saved && saved.version===2 ? Object.assign(freshToolState(),saved) : freshToolState(); } catch (error) { return freshToolState(); } })();
     toolState.params = Object.assign(freshToolState().params, toolState.params || {});
     const saveToolState = () => localStorage.setItem(toolStorageKey, JSON.stringify(toolState));
     const downloadJson = (filename,data) => { const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'}); const url=URL.createObjectURL(blob); const link=document.createElement('a'); link.href=url; link.download=filename; document.body.appendChild(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); };
