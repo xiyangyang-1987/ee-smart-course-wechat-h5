@@ -303,8 +303,9 @@
     }
     function loadDemoClass() {
       const makeTasks=done=>Object.keys(taskMeta).map(id=>({id:Number(id),title:taskMeta[id].title,status:Number(id)<=done?(Number(id)<done?'passed':'submitted'):Number(id)===done+1?'todo':'locked',evidence:Number(id)<=done?{note:`虚拟课堂第${id}阶段证据`}:null}));
-      classRecords=[normalizeClassRecord({tool:'EE-SmartCourse-LocalClassroom-v1',account:'课堂演示第1组',exportedAt:new Date().toISOString(),tasks:makeTasks(3)}),normalizeClassRecord({tool:'EE-SmartCourse-LocalClassroom-v1',account:'课堂演示第2组',exportedAt:new Date().toISOString(),tasks:makeTasks(2)})];
-      saveClassRecords(); renderAnalytics(); toast('已载入2个虚拟小组，可直接演示教师端汇总');
+      const demoDone=[6,5,4,3,3,2,2,2,1,1];
+      classRecords=demoDone.map((done,index)=>{const flagged=index===2||index===3; return normalizeClassRecord({tool:'EE-SmartCourse-LocalClassroom-v1',account:`课堂演示第${String(index+1).padStart(2,'0')}组`,exportedAt:new Date().toISOString(),tasks:makeTasks(done),toolCheck:{params:{counter:index===7?'74LS160':'74LS90',display:index===3?'74LS48':'DCD_HEX',mode:index===6?'12':'24'},checks:{passed:index===2?4:6,total:6,error:index===3?2:0},evidence:flagged?{observation:index===2?'no-carry':'garbled',measurement:'虚拟测点',note:'虚拟课堂演示记录'}:null}});});
+      saveClassRecords(); renderAnalytics(); toast('已载入10个虚拟小组，可复现29/60阶段与7组干预');
     }
     function renderAnalytics() {
       const currentTasks=Object.keys(taskMeta).map(id=>({id:Number(id),status:state.tasks[id],evidence:state.evidence[id] || null}));
