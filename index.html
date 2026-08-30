@@ -248,8 +248,17 @@
     function downloadJson(filename, data) { const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json;charset=utf-8'}); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = filename; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
     function readLocalToolSnapshot(account) { try { const value=JSON.parse(localStorage.getItem('ee-digital-clock-tool-v1:' + account) || 'null'); return value ? {params:value.params || null,checks:value.checks || [],evidence:value.evidence || null} : null; } catch(error) { return null; } }
     function buildReport() { return {tool:'EE-SmartCourse-LocalClassroom-v1', exportedAt:new Date().toISOString(), account:state.account, note:'本地浏览器工作区，不上传学生数据', completedStages:completedCount(), tasks:Object.keys(taskMeta).map(id => ({id:Number(id),title:taskMeta[id].title,status:state.tasks[id],evidence:state.evidence[id] || null})), toolCheck:readLocalToolSnapshot(state.account), feedbackReplies:state.replies}; }
+    function learningRoute() {
+      const snapshot=readLocalToolSnapshot(state.account); const rows=snapshot && Array.isArray(snapshot.checks) ? snapshot.checks : []; const params=snapshot && snapshot.params ? snapshot.params : null;
+      if (!rows.length || !params) return {label:'待诊断',note:'先运行设计助手，系统将依据检查结果生成补偿、标准或拓展路径。',advice:'先运行设计助手完成基线检查，再根据结果进入个性化学习路径。'};
+      const passed=rows.filter(row=>row && row[0]).length; const total=rows.length; const error=Number.isFinite(Number(params.hz)) ? Math.abs(Number(params.hz)-1)*100 : 100;
+      if (passed<total || error>1) return {label:'补偿路径',note:`检测到${total-passed}项关注或时基误差${error.toFixed(1)}%，先补做时基、计数与边界测点，再提交阶段三证据。`,advice:'已生成补偿路径：先回看对应知识卡片，补做测点记录和边界波形，复测通过后再进入下一阶段。'};
+      if (params.mode==='12' || params.counter==='74LS160' || params.display==='74LS48') return {label:'拓展路径',note:'主线检查通过，当前方案含拓展器件或12小时制；补充方案差异与边界论证后进入答辩。',advice:'已生成拓展路径：补充器件引脚、译码控制和时制边界的差异证据，再提交教师复核。'};
+      return {label:'标准路径',note:'基线检查通过，按标准路径提交59→00进位和23→00回零证据。',advice:'已生成标准路径：保存1 Hz读数、59→00进位和23→00回零三类证据，再进入教师复核。'};
+    }
     function renderHome() {
       const done = completedCount();
+      const route=learningRoute();
       $('stat-completion').textContent = Math.round(done / 6 * 100) + '%';
       $('stat-stage').textContent = String(Math.min(done + 1,6)).padStart(2,'0') + ' / 06';
       $('stat-stage-note').textContent = done >= 6 ? '六阶段工程档案已齐' : `下一阶段：${taskMeta[Math.min(done + 1,6)].title}`;
@@ -259,8 +268,8 @@
       document.querySelectorAll('[data-home-status]').forEach(el => { el.textContent = task3[0]; el.className = 'tag ' + task3[1]; });
       $('path-progress-label').textContent = `已完成 ${done} / 6 阶段`;
       $('path-progress').style.width = Math.max(15, Math.round(done / 6 * 100)) + '%';
-      $('path-current-note').textContent = done >= 6 ? '全部阶段完成 · 可导出工程档案' : `正在进行 · ${taskMeta[nextTaskId()].title}`;
-      $('home-ai-advice').textContent = state.evidence[3] ? '已保存仿真证据。下一步请按教师反馈补充复测结论，完成后再进入实物测试。' : '先在设计助手中运行结构检查，再把测量点、波形现象、修改动作和复测结论写入阶段成果。当前规则原型只提供排查线索，工程判断由学生完成并由教师审核。';
+      $('path-current-note').textContent = done >= 6 ? '全部阶段完成 · 可导出工程档案' : `${route.label} · ${route.note}`;
+      $('home-ai-advice').textContent = state.evidence[3] ? '已保存仿真证据。下一步请按教师反馈补充复测结论，完成后再进入实物测试。' : `${route.advice} 当前规则原型只提供排查线索，工程判断由学生完成并由教师审核。`;
     }
     function renderProject() {
       const done = completedCount();
@@ -321,7 +330,7 @@
     document.querySelectorAll('[data-tool]').forEach(el => el.addEventListener('click', () => { location.href = 'engineering-design-tool.html?account=' + encodeURIComponent(state.account); }));
     $('login-btn').addEventListener('click', () => showView('login'));
     $('demo-login').addEventListener('click', () => { const account = $('account').value.trim() || '课堂演示'; if (account.length > 24) { toast('小组代号不能超过24个字符'); return; } state = loadState(account); saveState(); $('account').value = account; renderAll(); showView('home'); toast(`${account} 已进入微信课堂工作区`); });
-    $('ai-path').addEventListener('click', () => { state.pathGenerated = true; saveState(); renderAll(); showView('home'); toast('已生成下一步路径：阶段证据 → 教师复核 → 迭代改进'); });
+    $('ai-path').addEventListener('click', () => { state.pathGenerated = true; saveState(); const route=learningRoute(); renderAll(); showView('home'); toast(`已生成${route.label}：${route.note.split('；')[0]}`); });
     $('submit-btn').addEventListener('click', () => openEvidenceModal(nextTaskId()));
     $('reply-btn').addEventListener('click', openFeedbackModal);
     $('export-project').addEventListener('click', () => { downloadJson('电工电子课程设计（二）_工程档案.json', buildReport()); toast('工程档案已导出'); });
