@@ -299,11 +299,14 @@
       if (!value.startsWith('EECLK1.')) throw new Error('提交码前缀不正确');
       const binary=atob(value.slice(7)); const bytes=Uint8Array.from(binary,char=>char.charCodeAt(0)); const payload=JSON.parse(new TextDecoder().decode(bytes));
       if (payload.t!=='EE1' || !payload.a || !Array.isArray(payload.r) || payload.r.length<3) throw new Error('提交码内容不完整');
-      const account=String(payload.a).trim(); const passed=Number(payload.r[0]); const total=Number(payload.r[1]); const error=Number(payload.r[2]);
+      const account=String(payload.a).trim(); const passed=Number(payload.r[0]); const total=Number(payload.r[1]); const error=Number(payload.r[2]); const params=payload.p || {};
       if (!account || account.length>24 || !Number.isInteger(passed) || passed<0 || passed>6 || total!==6 || !Number.isFinite(error) || Math.abs(error)>100000) throw new Error('提交码数据超出允许范围');
-      const done=Number.isInteger(Number(payload.d)) ? Math.max(0,Math.min(6,Number(payload.d))) : 0;
+      if (!['555','digital','external'].includes(params.source) || !Number.isFinite(Number(params.hz)) || Math.abs(Number(params.hz))>100000 || !['74LS90','74LS160'].includes(params.counter) || !['DCD_HEX','74LS48'].includes(params.display) || !['12','24'].includes(params.mode) || !['yes','no'].includes(params.adjust)) throw new Error('提交码参数不在课程方案范围');
+      if (payload.e && (!['no-count','no-carry','garbled','bounce','no-reset'].includes(payload.e.o) || typeof payload.e.m!=='string' || payload.e.m.length>120 || typeof payload.e.n!=='string' || payload.e.n.length>500)) throw new Error('提交码证据字段不完整');
+      const stageValue=payload.d===undefined ? 0 : Number(payload.d); if (!Number.isInteger(stageValue) || stageValue<0 || stageValue>6) throw new Error('提交码阶段数不在允许范围');
+      const done=stageValue;
       const tasks=Object.keys(taskMeta).map(id=>({id:Number(id),title:taskMeta[id].title,status:Number(id)<done?'passed':Number(id)===done?'submitted':Number(id)===done+1?'todo':'locked',evidence:Number(id)===3&&payload.e?{note:`${payload.e.m}；${payload.e.n}`,savedAt:payload.e.s}:null}));
-      return normalizeClassRecord({tool:'EE-SmartCourse-LocalClassroom-v1',account,exportedAt:payload.x,tasks,toolCheck:{params:payload.p || null,checks:{passed,total,error},evidence:payload.e ? {observation:payload.e.o,measurement:payload.e.m,note:payload.e.n,savedAt:payload.e.s} : null}});
+      return normalizeClassRecord({tool:'EE-SmartCourse-LocalClassroom-v1',account,exportedAt:payload.x,tasks,toolCheck:{params,checks:{passed,total,error},evidence:payload.e ? {observation:payload.e.o,measurement:payload.e.m,note:payload.e.n,savedAt:payload.e.s} : null}});
     }
     function openSubmissionModal() {
       openModal('粘贴学生提交码', `<form class="modal-form" id="submission-form"><p>学生在工程诊断工具点击“复制提交码”，通过课程群发送。提交码只含小组代号、设计参数、检查摘要和匿名工程证据。</p><label>课堂提交码<textarea id="submission-code" required placeholder="EECLK1.……"></textarea></label><div class="modal-actions"><button class="btn" type="button" id="modal-cancel">取消</button><button class="btn primary" type="submit">加入班级汇总</button></div></form>`);
