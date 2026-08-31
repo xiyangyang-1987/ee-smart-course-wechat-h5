@@ -27,6 +27,16 @@
   </style>
 </head>
 <body>
+<script>
+(function(){
+  const updateEntryCopy = () => {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node => { if(node.nodeValue.includes('工程设计微工具 · 公众号课堂入口')) node.nodeValue=node.nodeValue.replace('工程设计微工具 · 公众号课堂入口','工程设计微工具 · 课程群/二维码入口（公众号可适配）'); });
+  };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', updateEntryCopy); else updateEntryCopy();
+})();
+</script>
   <header class="top"><div class="brand"><div class="mark">EE</div><div><strong>电工电子课程设计（二）</strong><small>工程设计微工具 · 公众号课堂入口</small></div></div><a href="index.html">返回课程门户 〉</a></header>
   <main>
     <div class="crumb">课程工具 <b>数字电子时钟设计检查与故障诊断</b></div>

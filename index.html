@@ -146,6 +146,24 @@
   </style>
 </head>
 <body>
+<script>
+(function(){
+  const updateEntryCopy = () => {
+    const replacements = [
+      ['学生从公众号菜单进入工具，把匿名提交码发到课程群；', '学生从课程群链接或二维码进入工具，公众号菜单配置后复用同一入口；'],
+      ['公众号菜单 · 学生入口', '课程群/二维码 · 学生入口'],
+      ['学生从公众号自定义菜单进入HTTPS工具，', '学生当前可从课程群链接或二维码进入HTTPS工具；公众号菜单配置后复用同一入口，'],
+      ['公众号只承担统一入口与消息触达，', '课程群链接、二维码或公众号只承担统一入口与消息触达，'],
+      ['公众号课堂入口', '课堂H5入口'],
+      ['工程设计微工具 · 公众号课堂入口', '工程设计微工具 · 课程群/二维码入口（公众号可适配）']
+    ];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node => { replacements.forEach(([from,to]) => { if(node.nodeValue.includes(from)) node.nodeValue=node.nodeValue.split(from).join(to); }); });
+  };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', updateEntryCopy); else updateEntryCopy();
+})();
+</script>
   <div class="shell">
     <aside>
       <div class="brand"><div class="brand-mark">EE</div><div><strong>电工电子课程设计（二）</strong><span>智慧课程门户 · 课堂工作区</span></div></div>
