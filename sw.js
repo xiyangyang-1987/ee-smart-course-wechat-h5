@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ee-smart-course-pwa-v7';
+const CACHE_NAME = 'ee-smart-course-pwa-v8';
 const APP_SHELL = [
   './',
   './index.html',
