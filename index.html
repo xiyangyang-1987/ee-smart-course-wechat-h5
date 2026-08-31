@@ -285,6 +285,18 @@
       $('feedback-count').textContent = `${state.replies.length ? 0 : 1} 条建议`;
       $('project-ai-feedback').textContent = state.evidence[3] ? '阶段三证据已保存。教师复核时重点查看波形、边界测试和故障修改是否一一对应。' : '先运行设计助手并导出检查记录，再将诊断线索、实测点和修改后的结果写入阶段成果。';
     }
+    function expectedToolSummary(params, boundaryEvidence, boundaryRecord) {
+      const p=params || {}; const mode=String(p.mode || ''); const hz=Number(p.hz); const valid=Number.isFinite(hz) && hz>0;
+      const error=valid ? Math.abs(hz-1)*100 : 100;
+      const flags=[error<=1, p.counter==='74LS90', mode==='24', p.display==='DCD_HEX', p.adjust==='yes', boundaryEvidence===true && boundaryRecordMatchesMode(mode,boundaryRecord)];
+      return {flags, passed:flags.filter(Boolean).length, total:6, error};
+    }
+    function assertToolSummaryMatches(params, summary, boundaryEvidence, boundaryRecord) {
+      if (!params || ['source','hz','counter','display','mode','adjust'].some(key => params[key]===undefined)) return;
+      const expected=expectedToolSummary(params,boundaryEvidence,boundaryRecord); const actualError=Number(summary.error);
+      if (Number(summary.passed)!==expected.passed || Number(summary.total)!==6 || !Number.isFinite(actualError) || Math.abs(actualError-expected.error)>0.11) throw new Error('工程检查摘要与方案参数不一致');
+      return expected;
+    }
     function validateToolCheck(toolCheck) {
       if (!toolCheck || typeof toolCheck !== 'object' || Array.isArray(toolCheck)) throw new Error('工程检查记录格式不正确');
       const params=toolCheck.params;
@@ -308,6 +320,11 @@
       if (toolCheck.boundaryRecord!==undefined && (typeof toolCheck.boundaryRecord!=='string' || toolCheck.boundaryRecord.length>160)) throw new Error('边界记录格式不正确');
       if (toolCheck.boundaryEvidence===true && String(toolCheck.boundaryRecord || '').trim().length<8) throw new Error('边界记录不完整');
       if (toolCheck.boundaryEvidence===true && params && (params.mode==='12' || params.mode==='24') && !boundaryRecordMatchesMode(String(params.mode),toolCheck.boundaryRecord)) throw new Error('边界记录与时制不匹配');
+      const summaryValue=summary!==undefined && summary!==null ? summary : (checks && !Array.isArray(checks) ? checks : null);
+      if (summaryValue && params) {
+        const expected=assertToolSummaryMatches(params, summaryValue, toolCheck.boundaryEvidence===true, toolCheck.boundaryRecord);
+        if (Array.isArray(checks) && expected && checks.some((row,index) => row[0]!==expected.flags[index])) throw new Error('工程检查项与方案参数不一致');
+      }
       return toolCheck;
     }
     function normalizeClassRecord(report) {
@@ -329,8 +346,9 @@
       if (payload.t!=='EE1' || !payload.a || !Array.isArray(payload.r) || payload.r.length<3) throw new Error('提交码内容不完整');
       const account=String(payload.a).trim(); const passed=Number(payload.r[0]); const total=Number(payload.r[1]); const error=Number(payload.r[2]); const boundaryEvidence=payload.b===true; const boundaryRecord=typeof payload.q==='string' ? payload.q.trim() : ''; const params=payload.p || {};
       if (!account || account.length>24 || !Number.isInteger(passed) || passed<0 || passed>6 || total!==6 || !Number.isFinite(error) || error<0 || error>100000 || (payload.b!==undefined && typeof payload.b!=='boolean')) throw new Error('提交码数据超出允许范围');
-      if (!['555','digital','external'].includes(params.source) || !Number.isFinite(Number(params.hz)) || Math.abs(Number(params.hz))>100000 || !['74LS90','74LS160'].includes(params.counter) || !['DCD_HEX','74LS48'].includes(params.display) || !['12','24'].includes(params.mode) || !['yes','no'].includes(params.adjust)) throw new Error('提交码参数不在课程方案范围');
+      if (!['555','digital','external'].includes(params.source) || !Number.isFinite(Number(params.hz)) || Math.abs(Number(params.hz))>100000 || !['74LS90','74LS160'].includes(params.counter) || !['DCD_HEX','74LS48'].includes(params.display) || !['12','24'].includes(String(params.mode)) || !['yes','no'].includes(params.adjust)) throw new Error('提交码参数不在课程方案范围');
       if ((payload.q!==undefined && typeof payload.q!=='string') || boundaryEvidence && boundaryRecord.length<8 || boundaryRecord.length>160 || boundaryEvidence && !boundaryRecordMatchesMode(String(params.mode),boundaryRecord)) throw new Error('提交码边界记录与时制不匹配');
+      assertToolSummaryMatches(params, {passed,total,error}, boundaryEvidence, boundaryRecord);
       if (payload.e && (!['no-count','no-carry','garbled','bounce','no-reset'].includes(payload.e.o) || typeof payload.e.m!=='string' || !payload.e.m.trim() || payload.e.m.length>120 || typeof payload.e.n!=='string' || payload.e.n.trim().length<8 || payload.e.n.length>500)) throw new Error('提交码证据字段不完整');
       const stageValue=payload.d===undefined ? 0 : Number(payload.d); if (!Number.isInteger(stageValue) || stageValue<0 || stageValue>6) throw new Error('提交码阶段数不在允许范围');
       const done=stageValue;
@@ -353,7 +371,7 @@
     function loadDemoClass() {
       const makeTasks=done=>Object.keys(taskMeta).map(id=>({id:Number(id),title:taskMeta[id].title,status:Number(id)<=done?(Number(id)<done?'passed':'submitted'):Number(id)===done+1?'todo':'locked',evidence:Number(id)<=done?{note:`虚拟课堂第${id}阶段证据`}:null}));
       const demoDone=[6,5,4,3,3,2,2,2,1,1];
-      classRecords=demoDone.map((done,index)=>{const flagged=index===2||index===3; const boundaryRecord=index===6?'虚拟课堂11:59:59→12:00:00边界证据':'虚拟课堂23:59:59→00:00:00边界证据'; return normalizeClassRecord({tool:'EE-SmartCourse-LocalClassroom-v1',account:`课堂演示第${String(index+1).padStart(2,'0')}组`,exportedAt:new Date().toISOString(),tasks:makeTasks(done),toolCheck:{params:{counter:index===7?'74LS160':'74LS90',display:index===3?'74LS48':'DCD_HEX',mode:index===6?'12':'24'},checks:{passed:index===2?4:6,total:6,error:index===3?2:0},boundaryEvidence:true,boundaryRecord,evidence:flagged?{observation:index===2?'no-carry':'garbled',measurement:'虚拟测点',note:'虚拟课堂演示记录'}:null}});});
+      classRecords=demoDone.map((done,index)=>{const flagged=index===2||index===3; const boundaryRecord=index===6?'虚拟课堂11:59:59→12:00:00边界证据':'虚拟课堂23:59:59→00:00:00边界证据'; const demoParams={source:'555',hz:index===3?0.98:1,counter:index===7?'74LS160':'74LS90',display:index===3?'74LS48':'DCD_HEX',mode:index===6?'12':'24',adjust:'yes'}; const expected=expectedToolSummary(demoParams,true,boundaryRecord); return normalizeClassRecord({tool:'EE-SmartCourse-LocalClassroom-v1',account:`课堂演示第${String(index+1).padStart(2,'0')}组`,exportedAt:new Date().toISOString(),tasks:makeTasks(done),toolCheck:{params:demoParams,checks:{passed:expected.passed,total:6,error:Number(expected.error.toFixed(1))},boundaryEvidence:true,boundaryRecord,evidence:flagged?{observation:index===2?'no-carry':'garbled',measurement:'虚拟测点',note:'虚拟课堂演示记录'}:null}});});
       saveClassRecords(); renderAnalytics(); toast('已载入10个虚拟小组，可复现29/60阶段与7组干预');
     }
     function renderAnalytics() {
