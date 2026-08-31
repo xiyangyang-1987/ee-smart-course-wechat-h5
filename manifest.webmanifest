@@ -15,7 +15,7 @@
     {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
   ],
   "shortcuts": [
-    {"name": "开始结构检查", "url": "./engineering-design-tool.html?source=shortcut"},
+    {"name": "开始规则检查", "url": "./engineering-design-tool.html?source=shortcut"},
     {"name": "返回课程门户", "url": "./index.html"}
   ]
 }
