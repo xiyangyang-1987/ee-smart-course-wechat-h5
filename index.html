@@ -369,6 +369,7 @@
       saveClassRecords(); renderAnalytics(); $('class-import-files').value=''; toast(imported ? `已导入${imported}份档案${rejected.length ? `，${rejected.length}份格式不符` : ''}` : '未导入：请选择本课程导出的工程档案JSON');
     }
     function loadDemoClass() {
+      if (classRecords.length && !window.confirm('当前教师端已有课堂汇总。载入虚拟课堂将替换这些本机汇总，仅用于演示，是否继续？')) return;
       const makeTasks=done=>Object.keys(taskMeta).map(id=>({id:Number(id),title:taskMeta[id].title,status:Number(id)<=done?(Number(id)<done?'passed':'submitted'):Number(id)===done+1?'todo':'locked',evidence:Number(id)<=done?{note:`虚拟课堂第${id}阶段证据`}:null}));
       const demoDone=[6,5,4,3,3,2,2,2,1,1];
       classRecords=demoDone.map((done,index)=>{const flagged=index===2||index===3; const boundaryRecord=index===6?'虚拟课堂11:59:59→12:00:00边界证据':'虚拟课堂23:59:59→00:00:00边界证据'; const demoParams={source:'555',hz:index===3?0.98:1,counter:index===7?'74LS160':'74LS90',display:index===3?'74LS48':'DCD_HEX',mode:index===6?'12':'24',adjust:'yes'}; const expected=expectedToolSummary(demoParams,true,boundaryRecord); return normalizeClassRecord({tool:'EE-SmartCourse-LocalClassroom-v1',account:`课堂演示第${String(index+1).padStart(2,'0')}组`,exportedAt:new Date().toISOString(),tasks:makeTasks(done),toolCheck:{params:demoParams,checks:{passed:expected.passed,total:6,error:Number(expected.error.toFixed(1))},boundaryEvidence:true,boundaryRecord,evidence:flagged?{observation:index===2?'no-carry':'garbled',measurement:'虚拟测点',note:'虚拟课堂演示记录'}:null}});});
