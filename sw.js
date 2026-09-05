@@ -1,8 +1,12 @@
-const CACHE_NAME = 'ee-smart-course-pwa-v15';
+const CACHE_NAME = 'ee-smart-course-pwa-v16';
 const APP_SHELL = [
   './',
   './index.html',
   './engineering-design-tool.html',
+  './classroom.css',
+  './course-data.js',
+  './course-core.js',
+  './classroom.js',
   './manifest.webmanifest',
   './icon.svg'
 ];

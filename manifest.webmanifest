@@ -1,9 +1,9 @@
 {
-  "name": "数字电子时钟工程诊断",
-  "short_name": "时钟诊断",
-  "description": "《电工电子课程设计（二）》数字电子时钟参数检查、故障诊断与工程证据记录工具",
-  "id": "./engineering-design-tool.html",
-  "start_url": "./engineering-design-tool.html?source=pwa",
+  "name": "电工电子课程设计（二）课堂工作区",
+  "short_name": "时钟课堂",
+  "description": "《电工电子课程设计（二）》数字电子时钟工程档案、测量诊断和教师反馈工具",
+  "id": "./index.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -15,7 +15,7 @@
     {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
   ],
   "shortcuts": [
-    {"name": "开始规则检查", "url": "./engineering-design-tool.html?source=shortcut"},
-    {"name": "返回课程门户", "url": "./index.html"}
+    {"name": "工程档案", "url": "./index.html#project"},
+    {"name": "测量诊断", "url": "./engineering-design-tool.html"}
   ]
 }
