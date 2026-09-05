@@ -30,11 +30,12 @@
   }
   function runTool(account,input){
     const checks=expectedChecks(input), passed=checks.filter(x=>x.ok).length;
-    const out={version:3,account,params:clone(input.params),measurements:clone(input.measurements),evidence:String(input.evidence||''),checks,summary:{passed,total:checks.length},manualRunAt:now(),savedAt:now()};
+    const out={version:3,account,params:clone(input.params),measurements:clone(input.measurements),evidence:String(input.evidence||''),image:input.image&&input.image.data?{name:String(input.image.name||'波形截图').slice(0,120),data:input.image.data}:null,checks,summary:{passed,total:checks.length},manualRunAt:now(),savedAt:now()};
     writeTool(account,out);return out
   }
   function validateTool(t){
     if(!t||t.version!==3||!t.params||!t.measurements||!t.manualRunAt)throw Error('缺少真实运行记录');
+    if(t.image!==null&&t.image!==undefined&&(!t.image.data||!String(t.image.data).startsWith('data:image/')||String(t.image.data).length>500000))throw Error('波形图片附件格式或大小不合规');
     const exp=expectedChecks(t), passed=exp.filter(x=>x.ok).length;
     if(!Array.isArray(t.checks)||t.checks.length!==6||Number(t.summary?.passed)!==passed)throw Error('检查摘要与测量记录不一致');
     return t
