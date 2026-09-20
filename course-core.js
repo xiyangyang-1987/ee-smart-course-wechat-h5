@@ -30,7 +30,8 @@
   }
   function runTool(account,input){
     const checks=expectedChecks(input), passed=checks.filter(x=>x.ok).length;
-    const out={version:3,account,params:clone(input.params),measurements:clone(input.measurements),evidence:String(input.evidence||''),image:input.image&&input.image.data?{name:String(input.image.name||'波形截图').slice(0,120),data:input.image.data}:null,checks,summary:{passed,total:checks.length},manualRunAt:now(),savedAt:now()};
+    const previous=readTool(account);
+    const out={version:3,account,params:clone(input.params),measurements:clone(input.measurements),evidence:String(input.evidence||''),image:input.image&&input.image.data?{name:String(input.image.name||'波形截图').slice(0,120),data:input.image.data}:null,fileAnalysis:input.fileAnalysis||previous?.fileAnalysis||null,checks,summary:{passed,total:checks.length},manualRunAt:now(),savedAt:now()};
     writeTool(account,out);return out
   }
   function validateTool(t){
