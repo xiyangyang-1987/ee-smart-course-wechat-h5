@@ -1,0 +1,338 @@
+/* ============================================================================
+   设计令牌 + 基础组件层
+   全站唯一的取值来源。所有组件只允许引用这里的变量，禁止再写一次性色值、
+   一次性圆角或一次性阴影——这正是此前 UI「AI 味」的根源（132 种颜色、
+   22 种字号、15 种圆角、9 种阴影，彼此没有关系）。
+   基调：Linear / Vercel 式现代工具风——细边框、弱阴影、小圆角、等宽数字。
+   加载顺序：classroom.css → tokens.css → v2.css → v2-teacher.css
+   ========================================================================== */
+
+/* ---- 自托管 Inter：负责拉丁字母、数字与符号；中文由字体栈回退到系统现代黑体 ----
+   四个字重共 96 KB，无外部请求，离线可用。 ---- */
+@font-face{font-family:"Inter";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/inter-400.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/inter-500.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/inter-600.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/inter-700.woff2") format("woff2")}
+
+:root{
+  /* ---- 中性灰阶（zinc）---- */
+  --ink-0:#ffffff;
+  --ink-1:#fafafa;
+  --ink-2:#f4f4f5;
+  --ink-3:#ebebed;
+  --ink-4:#e0e0e3;
+  --ink-5:#c9c9ce;
+  --ink-6:#a1a1aa;
+  --ink-7:#7c7c85;
+  --ink-8:#52525b;
+  --ink-9:#3f3f46;
+  --ink-10:#27272a;
+  --ink-11:#18181b;
+
+  /* ---- 强调色（青绿，收窄使用面积）---- */
+  --accent:#0d9488;
+  --accent-strong:#0f766e;
+  --accent-deep:#115e59;
+  --accent-soft:#f0fdfa;
+  --accent-line:#99f6e4;
+  --accent-ring:rgba(13,148,136,.22);
+
+  /* ---- 语义色 ---- */
+  --ok:#15803d;      --ok-soft:#f0fdf4;     --ok-line:#bbf7d0;
+  --warn:#b45309;    --warn-soft:#fffbeb;   --warn-line:#fde68a;
+  --danger:#b91c1c;  --danger-soft:#fef2f2; --danger-line:#fecaca;
+  --info:#1d4ed8;    --info-soft:#eff6ff;   --info-line:#bfdbfe;
+
+  /* ---- 深色（仅知识图谱画布等深色组件）---- */
+  --night-0:#0b1220;
+  --night-1:#111a2b;
+  --night-2:#1b2739;
+  --night-3:#2a3a4d;
+  --night-ink:#e6edf3;
+  --night-ink-dim:#8fa3b8;
+
+  /* ---- 字号比例尺（固定 7 级；中文正文 15px 起步）---- */
+  --fs-xs:13px;
+  --fs-sm:14px;
+  --fs-base:16px;
+  --fs-md:18px;
+  --fs-lg:22px;
+  --fs-xl:32px;
+  --fs-2xl:42px;
+
+  /* ---- 行高 / 字重 ---- */
+  --lh-tight:1.32;
+  --lh-base:1.75;
+  --lh-loose:1.95;
+  --fw-normal:400;
+  --fw-medium:500;
+  --fw-semi:600;
+  --fw-bold:700;
+
+  /* ---- 圆角（只 3 档 + 全圆）---- */
+  --r-sm:4px;
+  --r-md:6px;
+  --r-lg:10px;
+  --r-full:999px;
+
+  /* ---- 阴影（只 2 档）---- */
+  --sh-1:0 1px 2px rgba(24,24,27,.05), 0 1px 3px rgba(24,24,27,.06);
+  --sh-2:0 10px 30px -8px rgba(24,24,27,.16), 0 2px 8px -2px rgba(24,24,27,.08);
+
+  /* ---- 边框 ---- */
+  --bd:1px solid var(--ink-4);
+  --bd-soft:1px solid var(--ink-3);
+
+  /* ---- 间距（4px 网格）---- */
+  --sp-1:4px;  --sp-2:8px;  --sp-3:12px; --sp-4:16px;
+  --sp-5:20px; --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px;
+
+  /* ---- 布局 / 字体 ---- */
+  --page-max:1240px;
+  --page-pad:24px;
+  /* 拉丁优先 Inter；中文依次尝试系统里的现代黑体，最后才落到雅黑 */
+  --font-sans:"Inter","Noto Sans SC","PingFang SC","HarmonyOS Sans SC","MiSans","Source Han Sans SC","Noto Sans CJK SC","Microsoft YaHei UI","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+  /* 数字与编号：Inter + 等宽数字，比代码字体更精致、且不跳动 */
+  --font-num:"Inter","Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  /* 公式与代码：保留真等宽字体 */
+  --font-mono:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+
+  /* ---- 动效 ---- */
+  --ease:cubic-bezier(.2,.8,.3,1);
+  --dur:.15s;
+}
+
+/* ---- 基础重置 ---- */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  font-family:var(--font-sans);
+  font-size:var(--fs-base);
+  line-height:var(--lh-base);
+  color:var(--ink-9);
+  background:var(--ink-1);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+h1,h2,h3,h4,h5,h6,p,figure,ol,ul{margin:0}
+h1,h2,h3,h4{font-weight:var(--fw-semi);line-height:var(--lh-tight);color:var(--ink-11);letter-spacing:-.011em}
+a{color:var(--accent-strong);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font:inherit;color:inherit}
+input,select,textarea{font:inherit}
+code,kbd,samp,pre{font-family:var(--font-mono);font-size:.92em}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+small{font-size:var(--fs-xs)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm)}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{background:var(--ink-5);border:3px solid transparent;background-clip:content-box;border-radius:var(--r-full)}
+*::-webkit-scrollbar-thumb:hover{background:var(--ink-6);background-clip:content-box}
+*::-webkit-scrollbar-track{background:transparent}
+
+/* ============================================================================
+   基础组件层
+   这些类名同时被 index.html 与 engineering-design-tool.html 使用，因此统一
+   在这里定义，并在 classroom.css 之后加载以覆盖旧样式。
+   ========================================================================== */
+
+/* ---- 页头 ---- */
+.top{
+  display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);
+  min-height:56px;padding:var(--sp-3) max(var(--page-pad),calc((100vw - var(--page-max))/2));
+  background:var(--ink-0);border-bottom:var(--bd);
+}
+.brand{font-size:var(--fs-base);font-weight:var(--fw-semi);color:var(--ink-11);line-height:1.3}
+.brand small{display:block;font-size:var(--fs-xs);font-weight:var(--fw-normal);color:var(--ink-6);margin-top:2px}
+
+/* ---- 主导航 ---- */
+.nav{
+  display:flex;gap:var(--sp-1);padding:0 max(var(--page-pad),calc((100vw - var(--page-max))/2));
+  background:var(--ink-0);border-bottom:var(--bd);overflow-x:auto;
+}
+.nav button{
+  border:0;background:transparent;color:var(--ink-7);font-size:var(--fs-sm);font-weight:var(--fw-medium);
+  padding:11px 14px;white-space:nowrap;cursor:pointer;border-bottom:2px solid transparent;border-radius:0;
+  transition:color var(--dur) var(--ease),border-color var(--dur) var(--ease);
+}
+.nav button:hover{color:var(--ink-10);background:transparent;border-color:transparent;border-bottom-color:var(--ink-5)}
+.nav button.active{color:var(--ink-11);font-weight:var(--fw-semi);border-bottom-color:var(--accent)}
+
+/* ---- 容器 ---- */
+.container{max-width:var(--page-max);margin:0 auto;padding:var(--sp-6) var(--page-pad) var(--sp-12)}
+.loading{color:var(--ink-6);font-size:var(--fs-sm);text-align:center;padding:var(--sp-12) 0}
+
+/* ---- Hero ---- */
+.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--sp-6);margin-bottom:var(--sp-6);flex-wrap:wrap}
+.hero h1{font-size:var(--fs-xl);font-weight:var(--fw-semi);color:var(--ink-11);letter-spacing:-.02em;margin:var(--sp-1) 0}
+.hero p{color:var(--ink-7);font-size:var(--fs-base);max-width:74ch;line-height:var(--lh-base)}
+.eyebrow{font-size:var(--fs-xs);font-weight:var(--fw-semi);letter-spacing:.08em;text-transform:uppercase;color:var(--accent-strong)}
+
+/* ---- 行 / 网格 ---- */
+.row{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.grid{display:grid;gap:var(--sp-4)}
+.grid.equal,.grid.three{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.grow{flex:1;min-width:0}
+
+/* ---- 按钮 ---- */
+.btn,button{
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-2);
+  padding:7px 13px;border:var(--bd);border-radius:var(--r-md);background:var(--ink-0);
+  color:var(--ink-9);font-size:var(--fs-sm);font-weight:var(--fw-medium);cursor:pointer;
+  transition:background var(--dur) var(--ease),border-color var(--dur) var(--ease),color var(--dur) var(--ease);
+  text-decoration:none;white-space:nowrap;
+}
+.btn:hover,button:hover{background:var(--ink-2);border-color:var(--ink-5);text-decoration:none}
+.btn:disabled,button:disabled{opacity:.45;cursor:not-allowed;background:var(--ink-1)}
+button.primary,.btn.primary{background:var(--ink-11);border-color:var(--ink-11);color:var(--ink-0)}
+button.primary:hover,.btn.primary:hover{background:var(--ink-10);border-color:var(--ink-10)}
+button.danger,.btn.danger{background:var(--ink-0);border-color:var(--danger-line);color:var(--danger)}
+button.danger:hover,.btn.danger:hover{background:var(--danger-soft);border-color:var(--danger)}
+button.link,.link{border:0;background:transparent;color:var(--accent-strong);padding:0;font-weight:var(--fw-medium);text-decoration:underline;text-underline-offset:2px}
+button.link:hover,.link:hover{background:transparent;color:var(--accent-deep);border-color:transparent}
+
+/* ---- 卡片 ---- */
+.card{background:var(--ink-0);border:var(--bd);border-radius:var(--r-md);padding:var(--sp-6)}
+.card h2{font-size:var(--fs-md);font-weight:var(--fw-semi);color:var(--ink-11);margin-bottom:var(--sp-3)}
+.card h3{font-size:var(--fs-base);font-weight:var(--fw-semi);color:var(--ink-11);margin-bottom:var(--sp-2)}
+.card.knowledge{background:var(--accent-soft);border-color:var(--accent-line)}
+
+/* ---- 提示条 ---- */
+.banner{
+  border:var(--bd);border-left:3px solid var(--ink-6);border-radius:var(--r-sm);
+  background:var(--ink-1);color:var(--ink-8);padding:var(--sp-3) var(--sp-4);
+  font-size:var(--fs-sm);line-height:var(--lh-base);margin-bottom:var(--sp-4);
+}
+.banner b{color:var(--ink-11)}
+.banner small{color:var(--ink-7)}
+.banner.warn{background:var(--warn-soft);border-color:var(--warn-line);border-left-color:var(--warn);color:var(--warn)}
+.banner.warn b,.banner.warn small{color:var(--warn)}
+.banner.good{background:var(--ok-soft);border-color:var(--ok-line);border-left-color:var(--ok);color:var(--ok)}
+.banner.good b,.banner.good small{color:var(--ok)}
+.banner.bad{background:var(--danger-soft);border-color:var(--danger-line);border-left-color:var(--danger);color:var(--danger)}
+.banner.bad b,.banner.bad small{color:var(--danger)}
+
+/* ---- 指标块 ---- */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--ink-4);border:var(--bd);border-radius:var(--r-md);overflow:hidden;margin-bottom:var(--sp-5)}
+.metric{background:var(--ink-0);padding:var(--sp-4)}
+.metric b{display:block;font-family:var(--font-num);font-size:var(--fs-lg);font-weight:var(--fw-semi);color:var(--ink-11);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.metric span{display:block;font-size:var(--fs-xs);color:var(--ink-6);margin-top:2px}
+
+/* ---- 列表行 ---- */
+.task{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) 0;border-bottom:var(--bd-soft)}
+.task:last-child{border-bottom:0}
+.task strong{display:block;font-size:var(--fs-sm);font-weight:var(--fw-medium);color:var(--ink-10)}
+.task small{display:block;font-size:var(--fs-xs);color:var(--ink-6);margin-top:2px}
+.step-no{
+  flex:none;width:24px;height:24px;display:grid;place-items:center;border-radius:var(--r-full);
+  background:var(--ink-2);color:var(--ink-8);font-family:var(--font-num);font-size:var(--fs-xs);font-weight:var(--fw-semi);font-variant-numeric:tabular-nums;
+}
+.record{border-bottom:var(--bd-soft);padding:var(--sp-3) 0}
+.record:last-child{border-bottom:0}
+.record b{font-size:var(--fs-sm);color:var(--ink-10)}
+.record p{margin:4px 0;font-size:var(--fs-sm);color:var(--ink-8);line-height:var(--lh-base)}
+.record small{color:var(--ink-6);font-size:var(--fs-xs)}
+
+/* ---- 徽标 ---- */
+.pill{
+  display:inline-block;padding:2px 8px;border-radius:var(--r-sm);border:1px solid var(--ink-4);
+  background:var(--ink-2);color:var(--ink-8);font-size:var(--fs-xs);font-weight:var(--fw-medium);white-space:nowrap;
+}
+.pill.green{background:var(--ok-soft);border-color:var(--ok-line);color:var(--ok)}
+.pill.red{background:var(--danger-soft);border-color:var(--danger-line);color:var(--danger)}
+.pill.amber{background:var(--warn-soft);border-color:var(--warn-line);color:var(--warn)}
+
+/* ---- 检查清单 ---- */
+.check-list{display:grid;gap:1px;background:var(--ink-4);border:var(--bd);border-radius:var(--r-md);overflow:hidden}
+.check-line{display:flex;gap:var(--sp-3);align-items:flex-start;background:var(--ink-0);padding:var(--sp-3) var(--sp-4);font-size:var(--fs-sm)}
+.check-line strong{display:block;color:var(--ink-10);font-weight:var(--fw-medium)}
+.check-line small{display:block;color:var(--ink-7);font-size:var(--fs-xs);margin-top:2px;line-height:var(--lh-base)}
+.result{border:var(--bd);border-left:3px solid var(--accent);border-radius:var(--r-sm);background:var(--accent-soft);padding:var(--sp-3) var(--sp-4);font-size:var(--fs-sm);margin-bottom:var(--sp-3)}
+.result b{color:var(--accent-deep)}
+
+/* ---- 表格 ---- */
+.table-wrap{overflow-x:auto;border:var(--bd);border-radius:var(--r-md)}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-sm);background:var(--ink-0)}
+th{
+  background:var(--ink-1);color:var(--ink-7);font-weight:var(--fw-semi);font-size:var(--fs-xs);
+  text-align:left;padding:var(--sp-3) var(--sp-4);border-bottom:var(--bd);white-space:nowrap;letter-spacing:.02em;
+}
+td{padding:var(--sp-3) var(--sp-4);border-bottom:var(--bd-soft);color:var(--ink-8);vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--ink-1)}
+td b{color:var(--ink-11);font-weight:var(--fw-semi)}
+
+/* ---- 表单 ---- */
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-4)}
+.form-grid .full{grid-column:1/-1}
+label{display:block;font-size:var(--fs-sm);color:var(--ink-7);font-weight:var(--fw-medium)}
+input,select,textarea{
+  display:block;width:100%;margin-top:6px;padding:8px 10px;
+  border:var(--bd);border-radius:var(--r-md);background:var(--ink-0);color:var(--ink-10);
+  font-size:var(--fs-sm);transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease);
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring)}
+textarea{min-height:88px;line-height:var(--lh-base);resize:vertical}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink-6) 50%),linear-gradient(135deg,var(--ink-6) 50%,transparent 50%);background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:32px}
+.help{font-size:var(--fs-xs);color:var(--ink-6);margin-top:6px;line-height:var(--lh-base)}
+.form-actions{display:flex;gap:var(--sp-2);margin-top:var(--sp-5);flex-wrap:wrap}
+
+/* ---- 其他 ---- */
+.empty{color:var(--ink-6);font-size:var(--fs-sm);padding:var(--sp-8) var(--sp-4);text-align:center;border:1px dashed var(--ink-4);border-radius:var(--r-md)}
+.muted{color:var(--ink-6)}
+.footer{margin-top:var(--sp-8);padding-top:var(--sp-4);border-top:var(--bd-soft);color:var(--ink-6);font-size:var(--fs-xs)}
+.code{font-family:var(--font-mono);font-size:var(--fs-xs);width:100%;min-height:120px;word-break:break-all}
+details{border-bottom:var(--bd-soft);padding:var(--sp-3) 0}
+summary{cursor:pointer;font-size:var(--fs-sm);font-weight:var(--fw-medium);color:var(--ink-10)}
+details p{margin:6px 0;font-size:var(--fs-sm);color:var(--ink-8)}
+details small{color:var(--ink-6);font-size:var(--fs-xs)}
+
+/* ---- 对话框 ---- */
+dialog{
+  border:var(--bd);border-radius:var(--r-lg);padding:0;max-width:min(880px,92vw);width:100%;
+  background:var(--ink-0);color:var(--ink-9);box-shadow:var(--sh-2);
+}
+dialog::backdrop{background:rgba(24,24,27,.42)}
+dialog header{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);padding:var(--sp-4) var(--sp-5);border-bottom:var(--bd)}
+dialog header h2{font-size:var(--fs-md);font-weight:var(--fw-semi);color:var(--ink-11)}
+dialog header button,dialog header #close-dialog{border:0;background:transparent;font-size:var(--fs-lg);line-height:1;color:var(--ink-6);padding:2px 6px;border-radius:var(--r-sm);cursor:pointer}
+dialog header button:hover{background:var(--ink-2);color:var(--ink-10)}
+#dialog-body{padding:var(--sp-5);max-height:76vh;overflow:auto}
+#dialog-body h3{font-size:var(--fs-base);margin:var(--sp-5) 0 var(--sp-2)}
+
+/* ---- 轻提示 ---- */
+#toast{
+  position:fixed;left:50%;bottom:28px;transform:translate(-50%,12px);
+  background:var(--ink-11);color:var(--ink-0);font-size:var(--fs-sm);
+  padding:9px 16px;border-radius:var(--r-md);box-shadow:var(--sh-2);
+  opacity:0;pointer-events:none;transition:opacity .18s var(--ease),transform .18s var(--ease);z-index:99;
+}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media(max-width:640px){
+  :root{--page-pad:16px}
+  .form-grid{grid-template-columns:1fr}
+  .hero h1{font-size:var(--fs-lg)}
+}
+
+/* ============================================================================
+   兼容覆盖：classroom.css 里为旧的深色顶栏写了一组高特异性规则
+   （.top button{color:white} 等），新顶栏改为浅色后这些规则会让文字不可见。
+   这里用同等特异性 + 后加载来覆盖它们。
+   ========================================================================== */
+.top button,.top .btn{
+  background:var(--ink-0);border-color:var(--ink-4);color:var(--ink-9);
+  border-radius:var(--r-md);padding:7px 13px;font-size:var(--fs-sm);font-weight:var(--fw-medium);
+}
+.top button:hover,.top .btn:hover{background:var(--ink-2);border-color:var(--ink-5)}
+.top button.active{background:var(--ink-11);border-color:var(--ink-11);color:var(--ink-0)}
+.save,.top .save{color:var(--ink-6);font-size:var(--fs-xs)}
+.save.bad,.top .save.bad{color:var(--danger)}
+.brand small{color:var(--ink-6);font-size:var(--fs-xs);font-weight:var(--fw-normal)}
+/* 工具页顶栏与内容区的间距对齐新栅格 */
+.top{min-height:56px;padding-top:10px;padding-bottom:10px}
+
+/* 作者样式里的 input/select/textarea{display:block} 会盖掉浏览器对 [hidden] 的默认
+   display:none（作者样式优先于 UA 样式，与特异性无关），导致隐藏的文件选择框露出来。 */
+[hidden]{display:none!important}

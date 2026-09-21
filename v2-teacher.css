@@ -1,0 +1,42 @@
+/* ============================================================================
+   教师端样式。取值全部引用 tokens.css。
+   ========================================================================== */
+.v2-teacher-summary{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;
+  background:var(--ink-4);border:var(--bd);border-radius:var(--r-md);overflow:hidden;margin-bottom:var(--sp-5);
+}
+.v2-teacher-summary>div{background:var(--ink-0);padding:var(--sp-4)}
+.v2-teacher-summary span{display:block;color:var(--ink-6);font-size:var(--fs-xs)}
+.v2-teacher-summary b{display:block;font-family:var(--font-num);font-size:var(--fs-lg);font-variant-numeric:tabular-nums;font-weight:var(--fw-semi);color:var(--ink-11);letter-spacing:-.02em;line-height:1.25;margin-top:2px}
+
+.v2-review-card,.v2-review-detail{background:var(--ink-0);border:var(--bd);border-radius:var(--r-md);padding:var(--sp-5);margin-bottom:var(--sp-5)}
+.v2-review-head{display:flex;justify-content:space-between;gap:var(--sp-5);align-items:center;margin-bottom:var(--sp-4);flex-wrap:wrap}
+.v2-review-head h2,.v2-review-card h2{margin:0 0 4px;color:var(--ink-11);font-size:var(--fs-md);font-weight:var(--fw-semi)}
+.v2-review-head p{margin:0;color:var(--ink-7);font-size:var(--fs-sm)}
+
+.v2-table{min-width:900px}
+.v2-score-mini{font-family:var(--font-num);font-size:var(--fs-md);font-weight:var(--fw-semi);font-variant-numeric:tabular-nums}
+.v2-score-mini.low,.v2-score-big.low{color:var(--danger)}
+.v2-score-mini.mid,.v2-score-big.mid{color:var(--warn)}
+.v2-score-mini.high,.v2-score-big.high{color:var(--ink-11)}
+.v2-score-big{font-family:var(--font-num);font-size:var(--fs-2xl);font-variant-numeric:tabular-nums;font-weight:var(--fw-semi);letter-spacing:-.03em;color:var(--ink-11);line-height:1.1}
+.v2-score-big small{font-size:var(--fs-sm);color:var(--ink-6);font-family:var(--font-sans);font-weight:var(--fw-normal);letter-spacing:0}
+.v2-review-detail h2{margin:5px 0;color:var(--ink-11);font-size:var(--fs-md)}
+.v2-review-detail h3{margin:var(--sp-5) 0 var(--sp-2);color:var(--ink-11);font-size:var(--fs-base);font-weight:var(--fw-semi)}
+.v2-review-detail ol,.v2-review-detail ul{padding-left:20px;font-size:var(--fs-sm);color:var(--ink-8);line-height:var(--lh-loose)}
+.v2-review-detail p{font-size:var(--fs-sm);color:var(--ink-8);line-height:var(--lh-base)}
+.v2-review-actions{border-top:var(--bd-soft);padding-top:var(--sp-4);margin-top:var(--sp-4);display:flex;gap:var(--sp-2);flex-wrap:wrap}
+
+.v2-bars{display:grid;gap:7px}
+.v2-bar-row{display:grid;grid-template-columns:270px 1fr 48px;gap:10px;align-items:center;font-size:var(--fs-xs)}
+.v2-bar-row>span{color:var(--ink-8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v2-bar-row i{height:6px;background:var(--ink-3);border-radius:var(--r-full);overflow:hidden}
+.v2-bar-row i b{display:block;height:100%;background:var(--ink-11);border-radius:var(--r-full)}
+.v2-bar-row strong{text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums;color:var(--ink-10);font-weight:var(--fw-medium)}
+
+@media(max-width:850px){
+  .v2-teacher-summary{grid-template-columns:1fr 1fr}
+  .v2-review-head{display:block}
+  .v2-review-head .row{margin-top:12px}
+  .v2-bar-row{grid-template-columns:110px 1fr 34px}
+}
